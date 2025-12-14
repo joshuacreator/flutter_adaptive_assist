@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 
+/// A class to detect and respond to adaptive accessibility settings.
+///
+/// This class provides a unified API to access accessibility settings from the
+/// underlying platform (Android and iOS).
 class AdaptiveAssist {
   // Define the main MethodChannel
   static const MethodChannel _channel = MethodChannel(
@@ -10,12 +14,38 @@ class AdaptiveAssist {
   // StreamController to pipe events from native code to Dart
   static final _monochromeStreamController = StreamController<bool>.broadcast();
 
-  /// A reactive stream that emits true if the system's color-altering
-  /// accessibility settings (e.g., Grayscale, Color Inversion) are active.
+  /// A reactive stream that emits events when the system's monochrome mode
+  /// status changes.
+  ///
+  /// On Android, this includes "Color Correction" and "Color Inversion".
+  /// On iOS, this corresponds to the "Grayscale" setting.
+  ///
+  /// Emits `true` if monochrome mode is enabled, `false` otherwise.
+  ///
+  /// ## Example
+  /// ```dart
+  /// AdaptiveAssist.monochromeModeEnabledStream.listen((isEnabled) {
+  ///   print('Monochrome mode is ${isEnabled ? 'on' : 'off'}');
+  /// });
+  /// ```
   static Stream<bool> get monochromeModeEnabledStream =>
       _monochromeStreamController.stream;
 
-  /// Retrieves the current status of monochrome mode.
+  /// Retrieves the current status of the system's monochrome mode.
+  ///
+  /// Returns a `Future<bool>` that completes with `true` if monochrome mode
+  /// is enabled, and `false` otherwise.
+  ///
+  /// On Android, this checks for "Color Correction" and "Color Inversion".
+  /// On iOS, this checks for the "Grayscale" setting.
+  ///
+  /// ## Example
+  /// ```dart
+  /// Future<void> checkMonochromeStatus() async {
+  ///   final isMonochrome = await AdaptiveAssist.getMonochromeModeEnabled();
+  ///   print('Monochrome mode is currently ${isMonochrome ? 'on' : 'off'}');
+  /// }
+  /// ```
   static Future<bool> getMonochromeModeEnabled() async {
     try {
       final bool? isEnabled = await _channel.invokeMethod(

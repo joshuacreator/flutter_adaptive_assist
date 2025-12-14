@@ -2,18 +2,38 @@ import Flutter
 import UIKit
 
 public class FlutterAdaptiveAssistPlugin: NSObject, FlutterPlugin {
-  public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "flutter_adaptive_assist", binaryMessenger: registrar.messenger())
-    let instance = FlutterAdaptiveAssistPlugin()
-    registrar.addMethodCallDelegate(instance, channel: channel)
-  }
+    private var channel: FlutterMethodChannel
 
-  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    switch call.method {
-    case "getPlatformVersion":
-      result("iOS " + UIDevice.current.systemVersion)
-    default:
-      result(FlutterMethodNotImplemented)
+    init(channel: FlutterMethodChannel) {
+        self.channel = channel
+        super.init()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(grayscaleStatusDidChange),
+            name: UIAccessibility.grayscaleStatusDidChangeNotification,
+            object: nil
+        )
     }
-  }
+
+    public static func register(with registrar: FlutterPluginRegistrar) {
+        let channel = FlutterMethodChannel(name: "flutter_adaptive_assist", binaryMessenger: registrar.messenger())
+        let instance = FlutterAdaptiveAssistPlugin(channel: channel)
+        registrar.addMethodCallDelegate(instance, channel: channel)
+    }
+
+    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if call.method == "getMonochromeModeEnabled" {
+            result(UIAccessibility.isGrayscaleEnabled)
+        } else {
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    @objc private func grayscaleStatusDidChange() {
+        channel.invokeMethod("onMonochromeModeChange", arguments: UIAccessibility.isGrayscaleEnabled)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
 }
