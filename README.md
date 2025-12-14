@@ -1,20 +1,29 @@
-# flutter_adaptive_assist
+# Flutter Adaptive Assist
 
-[![pub package](https://img.shields.io/pub/v/flutter_adaptive_assist.svg)](https://pub.dev/packages/flutter_adaptive_assist)
-
-A Flutter plugin to detect and respond to adaptive accessibility settings on iOS and Android, such as monochrome mode, color correction, and grayscale.
+A Flutter plugin that provides unified access to platform-specific accessibility settings, enabling developers to create truly adaptive user interfaces that respect system accessibility preferences.
 
 ## Features
 
-- **Monochrome Mode Detection**: Detects if the system is in a monochrome state, including:
-  - **Android**: Color Correction (`accessibility_display_daltonizer_enabled`) and Color Inversion (`accessibility_display_inversion_enabled`).
-  - **iOS**: Grayscale (`UIAccessibility.isGrayscaleEnabled`).
-- **Reactive Stream**: Provides a `Stream<bool>` that emits events when the monochrome status changes.
-- **Cross-Platform**: Unified API for both Android and iOS.
+- 🎨 **Monochrome Mode Detection** - Detect when users have enabled grayscale/color correction
+- 🎬 **Reduce Motion Support** - Respond to user preferences for reduced animations
+- 📝 **Bold Text Detection** - Identify when users prefer bold text (iOS)
+- 🌗 **High Contrast Mode** - Detect high contrast preferences
+- 📏 **Text Scale Factor** - Access the system's text size multiplier
+- 📡 **Reactive Streams** - Listen to real-time changes in accessibility settings
+- 🔒 **Type-Safe** - Full null-safety support
+- 🧪 **Testable** - Built with testing in mind
 
-## Getting Started
+## Platform Support
 
-### Installation
+| Feature | Android | iOS |
+|---------|---------|-----|
+| Monochrome Mode | ✅ (API 21+) | ✅ (iOS 13.0+) |
+| Reduce Motion | ✅ (API 21+) | ✅ (iOS 13.0+) |
+| Bold Text | ❌ | ✅ (iOS 13.0+) |
+| High Contrast | ✅ (API 21+) | ✅ (iOS 13.0+) |
+| Text Scale Factor | ✅ (API 21+) | ✅ (iOS 13.0+) |
+
+## Installation
 
 Add this to your package's `pubspec.yaml` file:
 
@@ -23,61 +32,280 @@ dependencies:
   flutter_adaptive_assist: ^1.0.0
 ```
 
-Then, install packages from the command line:
+Then run:
 
-```shell
+```bash
 flutter pub get
 ```
 
-### Usage
+## Usage
 
-Import the package:
+### Basic Setup
 
-```dart
-import 'package:flutter_adaptive_assist/flutter_adaptive_assist.dart';
-```
-
-#### Get the current monochrome mode status:
+Initialize the plugin early in your app (e.g., in `main()`):
 
 ```dart
-final bool isMonochrome = await AdaptiveAssist.getMonochromeModeEnabled();
+import 'package:flutter_adaptive_assist/adaptive_assist.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  AdaptiveAssist.ensureInitialized();
+  runApp(MyApp());
+}
 ```
 
-#### Listen for changes in monochrome mode:
+### Check Current Settings
 
 ```dart
-final Stream<bool> monochromeModeStream = AdaptiveAssist.monochromeModeEnabledStream;
+// Check individual settings
+final isMonochrome = await AdaptiveAssist.getMonochromeModeEnabled();
 
-monochromeModeStream.listen((bool isEnabled) {
-  print('Monochrome mode is now ${isEnabled ? 'enabled' : 'disabled'}');
-});
+if (isMonochrome) {
+  // Apply monochrome-friendly color scheme
+}
+
+// Or get all settings at once (more efficient)
+final config = await AdaptiveAssist.getConfig();
+
+if (config.monochromeModeEnabled) {
+  // Apply monochrome-friendly colors
+}
+
+if (config.reduceMotionEnabled) {
+  // Disable or simplify animations
+}
+
+if (config.textScaleFactor > 1.5) {
+  // Adjust layout for larger text
+}
 ```
 
-## API
+### Listen to Changes
 
-- `Future<bool> getMonochromeModeEnabled()`: Retrieves the current status of monochrome mode.
-- `Stream<bool> get monochromeModeEnabledStream`: A stream that emits `true` when monochrome mode is enabled and `false` when it is disabled.
+```dart
+@override
+void initState() {
+  super.initState();
+  
+  // Listen to monochrome mode changes
+  AdaptiveAssist.monochromeModeEnabledStream.listen((isEnabled) {
+    setState(() {
+      _isMonochrome = isEnabled;
+    });
+  });
+}
+```
 
-## Platform Specifics
+### Complete Example
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_adaptive_assist/adaptive_assist.dart';
+
+class AdaptiveHomePage extends StatefulWidget {
+  @override
+  _AdaptiveHomePageState createState() => _AdaptiveHomePageState();
+}
+
+class _AdaptiveHomePageState extends State<AdaptiveHomePage> {
+  AdaptiveConfig _config = AdaptiveConfig();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+    
+    // Listen to changes
+    AdaptiveAssist.monochromeModeEnabledStream.listen((enabled) {
+      _loadConfig();
+    });
+  }
+
+  Future<void> _loadConfig() async {
+    final config = await AdaptiveAssist.getConfig();
+    setState(() {
+      _config = config;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Adaptive UI Demo'),
+      ),
+      body: AnimatedContainer(
+        duration: _config.reduceMotionEnabled 
+            ? Duration.zero 
+            : Duration(milliseconds: 300),
+        color: _config.monochromeModeEnabled 
+            ? Colors.grey[300] 
+            : Colors.blue[100],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Accessibility Status',
+                style: TextStyle(
+                  fontSize: 20 * _config.textScaleFactor,
+                  fontWeight: _config.boldTextEnabled 
+                      ? FontWeight.bold 
+                      : FontWeight.normal,
+                ),
+              ),
+              SizedBox(height: 20),
+              _buildStatusCard('Monochrome Mode', _config.monochromeModeEnabled),
+              _buildStatusCard('Reduce Motion', _config.reduceMotionEnabled),
+              _buildStatusCard('Bold Text', _config.boldTextEnabled),
+              _buildStatusCard('High Contrast', _config.highContrastEnabled),
+              _buildStatusCard('Text Scale', '${_config.textScaleFactor.toStringAsFixed(2)}x'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(String label, dynamic value) {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label),
+            Text(
+              value.toString(),
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // Optional: dispose if you want to clean up
+    // AdaptiveAssist.dispose();
+    super.dispose();
+  }
+}
+```
+
+## API Reference
+
+### AdaptiveAssist
+
+#### Methods
+
+- `static void ensureInitialized()` - Initialize the plugin (safe to call multiple times)
+- `static Future<bool> getMonochromeModeEnabled()` - Check if monochrome mode is enabled
+- `static Future<AdaptiveConfig> getConfig()` - Get all accessibility settings at once
+- `static void clearCache()` - Force fresh platform queries on next call
+- `static void dispose()` - Clean up resources (typically called on app disposal)
+
+#### Streams
+
+- `static Stream<bool> monochromeModeEnabledStream` - Stream of monochrome mode changes
+
+### AdaptiveConfig
+
+A data class containing all accessibility settings:
+
+```dart
+class AdaptiveConfig {
+  final bool reduceMotionEnabled;
+  final bool monochromeModeEnabled;
+  final bool boldTextEnabled;
+  final bool highContrastEnabled;
+  final double textScaleFactor;
+}
+```
+
+## Testing
+
+The plugin is designed to be testable. Use the provided test channel for unit tests:
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_adaptive_assist/adaptive_assist.dart';
+
+void main() {
+  setUp(() {
+    AdaptiveAssist.reset();
+    
+    // Set up mock channel
+    final testChannel = MethodChannel('flutter_adaptive_assist');
+    AdaptiveAssist.testChannel = testChannel;
+    
+    // Mock responses
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(testChannel, (call) async {
+      if (call.method == 'getMonochromeModeEnabled') {
+        return true;
+      }
+      return null;
+    });
+  });
+
+  test('getMonochromeModeEnabled returns mocked value', () async {
+    final result = await AdaptiveAssist.getMonochromeModeEnabled();
+    expect(result, true);
+  });
+}
+```
+
+## Platform-Specific Notes
 
 ### Android
 
-The plugin checks for two system settings:
-
-- `accessibility_display_daltonizer_enabled`: For color correction.
-- `accessibility_display_inversion_enabled`: For color inversion.
-
-If either of these is enabled, `getMonochromeModeEnabled()` will return `true`.
+- **Monochrome Mode**: Checks both Color Correction (Daltonizer) and Color Inversion settings
+- **Reduce Motion**: Checks if animation scales are set to very low values (< 0.1)
+- **Bold Text**: Not available system-wide on Android (returns `false`)
+- **High Contrast**: Available on Android 5.0+ (API 21)
+- **Minimum SDK**: API 21 (Android 5.0 Lollipop)
 
 ### iOS
 
-The plugin checks the `UIAccessibility.isGrayscaleEnabled` property. If it's `true`, `getMonochromeModeEnabled()` will return `true`.
+- **Monochrome Mode**: Uses `UIAccessibility.isGrayscaleEnabled`
+- **Reduce Motion**: Uses `UIAccessibility.isReduceMotionEnabled`
+- **Bold Text**: Uses `UIAccessibility.isBoldTextEnabled`
+- **High Contrast**: Uses `UIAccessibility.isDarkerSystemColorsEnabled` (iOS 13.0+)
+- **Text Scale Factor**: Maps `UIApplication.shared.preferredContentSizeCategory` to numeric values
+- **Minimum Version**: iOS 13.0
+
+## Performance Considerations
+
+- The plugin caches values to minimize platform calls
+- Cache is automatically updated when settings change
+- Use `getConfig()` instead of multiple individual calls when you need several values
+- Streams are broadcast streams - safe to have multiple listeners
+
+## Troubleshooting
+
+### Stream not emitting values
+
+Make sure you call `AdaptiveAssist.ensureInitialized()` before subscribing to streams.
+
+### Values not updating on Android
+
+Check that your app has the necessary permissions and that ContentObserver registration succeeded (check logs).
+
+### iOS notifications not working
+
+Ensure you're testing on a real device, as some accessibility features may not work correctly in the simulator.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please read the contributing guidelines before submitting PRs.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Credits
+
+Developed with ❤️ for the Flutter community.

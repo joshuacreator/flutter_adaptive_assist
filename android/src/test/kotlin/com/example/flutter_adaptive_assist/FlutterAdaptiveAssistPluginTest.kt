@@ -1,27 +1,65 @@
 package com.example.flutter_adaptive_assist
 
+import android.content.ContentResolver
+import android.provider.Settings
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import org.mockito.Mockito
-import kotlin.test.Test
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.verify
+import org.mockito.MockitoAnnotations
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 
-/*
- * This demonstrates a simple unit test of the Kotlin portion of this plugin's implementation.
- *
- * Once you have built the plugin's example app, you can run these tests from the command
- * line by running `./gradlew testDebugUnitTest` in the `example/android/` directory, or
- * you can run them directly from IDEs that support JUnit such as Android Studio.
- */
+@RunWith(RobolectricTestRunner::class)
+class FlutterAdaptiveAssistPluginTest {
 
-internal class FlutterAdaptiveAssistPluginTest {
+    private lateinit var plugin: FlutterAdaptiveAssistPlugin
+    private lateinit var contentResolver: ContentResolver
+
+    @Mock
+    private lateinit var mockResult: MethodChannel.Result
+
+    @Before
+    fun setUp() {
+        MockitoAnnotations.initMocks(this)
+        plugin = FlutterAdaptiveAssistPlugin()
+        contentResolver = RuntimeEnvironment.application.contentResolver
+    }
+
     @Test
-    fun onMethodCall_getPlatformVersion_returnsExpectedValue() {
-        val plugin = FlutterAdaptiveAssistPlugin()
+    fun onMethodCall_getMonochromeModeEnabled_returnsTrueWhenDaltonizerEnabled() {
+        Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer_enabled", 1)
+        Settings.Secure.putInt(contentResolver, "accessibility_display_inversion_enabled", 0)
 
-        val call = MethodCall("getPlatformVersion", null)
-        val mockResult: MethodChannel.Result = Mockito.mock(MethodChannel.Result::class.java)
+        val call = MethodCall("getMonochromeModeEnabled", null)
         plugin.onMethodCall(call, mockResult)
 
-        Mockito.verify(mockResult).success("Android " + android.os.Build.VERSION.RELEASE)
+        verify(mockResult).success(true)
+    }
+
+    @Test
+    fun onMethodCall_getMonochromeModeEnabled_returnsTrueWhenInversionEnabled() {
+        Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer_enabled", 0)
+        Settings.Secure.putInt(contentResolver, "accessibility_display_inversion_enabled", 1)
+
+        val call = MethodCall("getMonochromeModeEnabled", null)
+        plugin.onMethodCall(call, mockResult)
+
+        verify(mockResult).success(true)
+    }
+
+    @Test
+    fun onMethodCall_getMonochromeModeEnabled_returnsFalseWhenBothDisabled() {
+        Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer_enabled", 0)
+        Settings.Secure.putInt(contentResolver, "accessibility_display_inversion_enabled", 0)
+
+        val call = MethodCall("getMonochromeModeEnabled", null)
+        plugin.onMethodCall(call, mockResult)
+
+        verify(mockResult).success(false)
     }
 }
