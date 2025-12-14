@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 /// A class to detect and respond to adaptive accessibility settings.
 ///
@@ -15,6 +16,7 @@ import 'package:flutter/services.dart';
 /// ## Usage
 /// ```dart
 /// // Initialize once in your app (e.g., in main())
+/// WidgetsFlutterBinding.ensureInitialized(); // Called in void main() {}
 /// AdaptiveAssist.ensureInitialized();
 ///
 /// // Get current status
@@ -53,10 +55,12 @@ class AdaptiveAssist {
   ///
   /// Emits `true` if monochrome mode is enabled, `false` otherwise.
   ///
-  /// **Note**: You must call [ensureInitialized] before using this stream.
+  /// **Note**: You must call [ensureInitialized] and call
+  /// [WidgetsFlutterBinding.ensureInitialized()] in your app's main method before using this stream.
   ///
   /// ## Example
   /// ```dart
+  /// WidgetsFlutterBinding.ensureInitialized(); // Called in void main() {}
   /// AdaptiveAssist.ensureInitialized();
   /// AdaptiveAssist.monochromeModeEnabledStream.listen((isEnabled) {
   ///   print('Monochrome mode is ${isEnabled ? 'on' : 'off'}');
@@ -75,7 +79,6 @@ class AdaptiveAssist {
   /// It's recommended to call this early in your app lifecycle (e.g., in main()).
   static void ensureInitialized() {
     if (_isInitialized) return;
-
     _monochromeStreamController = StreamController<bool>.broadcast();
     _channel.setMethodCallHandler(_handleMethodCall);
     _isInitialized = true;
