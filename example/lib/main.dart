@@ -6,54 +6,103 @@ void main() {
 
   AdaptiveAssist.ensureInitialized();
 
-  runApp(MaterialApp(home: const AdaptiveAssistExample()));
+  runApp(MaterialApp(home: AdaptiveHomePage()));
 }
 
-class AdaptiveAssistExample extends StatefulWidget {
-  const AdaptiveAssistExample({super.key});
+class AdaptiveHomePage extends StatefulWidget {
+  const AdaptiveHomePage({super.key});
 
   @override
-  State<AdaptiveAssistExample> createState() => _AdaptiveAssistExampleState();
+  State<AdaptiveHomePage> createState() => _AdaptiveHomePageState();
 }
 
-class _AdaptiveAssistExampleState extends State<AdaptiveAssistExample> {
-  bool isMonochromeEnabled = true;
+class _AdaptiveHomePageState extends State<AdaptiveHomePage> {
+  AdaptiveConfig _config = AdaptiveConfig();
 
   @override
   void initState() {
     super.initState();
+    _loadConfig();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await getMonochromeModeEnabled();
-
-      await AdaptiveAssist.getConfig().then((config) {
-        print('Config: ${config.toString()}');
-      });
-
-      AdaptiveAssist.monochromeModeEnabledStream.listen((isEnabled) {
-        print('Monochrome mode: $isEnabled');
-      });
+    // Listen to changes
+    AdaptiveAssist.monochromeModeEnabledStream.listen((enabled) {
+      _loadConfig();
     });
   }
 
-  @override
-  void dispose() {
-    AdaptiveAssist.dispose();
-    super.dispose();
-  }
-
-  Future<void> getMonochromeModeEnabled() async {
-    final isEnabled = await AdaptiveAssist.getMonochromeModeEnabled();
+  Future<void> _loadConfig() async {
+    final config = await AdaptiveAssist.getConfig();
     setState(() {
-      isMonochromeEnabled = isEnabled;
+      _config = config;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Adaptive Assist')),
-      body: Center(child: Text('Monochrome Mode: $isMonochromeEnabled...')),
+      appBar: AppBar(title: Text('Adaptive UI Demo')),
+      body: AnimatedContainer(
+        duration: _config.reduceMotionEnabled
+            ? Duration.zero
+            : Duration(milliseconds: 300),
+        color: _config.monochromeModeEnabled
+            ? Colors.grey[300]
+            : Colors.blue[100],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Accessibility Status',
+                style: TextStyle(
+                  fontSize: 20 * _config.textScaleFactor,
+                  fontWeight: _config.boldTextEnabled
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
+              ),
+              SizedBox(height: 20),
+              _buildStatusCard(
+                'Monochrome Mode',
+                _config.monochromeModeEnabled,
+              ),
+              _buildStatusCard('Reduce Motion', _config.reduceMotionEnabled),
+              _buildStatusCard('Bold Text', _config.boldTextEnabled),
+              _buildStatusCard('High Contrast', _config.highContrastEnabled),
+              _buildStatusCard(
+                'Text Scale',
+                '${_config.textScaleFactor.toStringAsFixed(2)}x',
+              ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  Widget _buildStatusCard(String label, dynamic value) {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label),
+            Text(
+              value.toString(),
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // Optional: dispose if you want to clean up
+    // AdaptiveAssist.dispose();
+    super.dispose();
   }
 }
