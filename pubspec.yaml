@@ -1,7 +1,7 @@
 name: flutter_adaptive_assist
 description: "This package provides a cohesive, cross-platform API for developers to listen to, react to, and utilize high-level user-defined system settings and less-common device sensors to create truly adaptive UI/UX."
 version: 1.0.0
-homepage:
+homepage: "https://github.com/joshuacreator/flutter_adaptive_assist"
 
 environment:
   sdk: ^3.10.1
